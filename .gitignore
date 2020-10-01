@@ -1,1 +1,15 @@
+# Virtual environment
 venv/
+
+# Data folders
+batched_data/
+input_images/
+input_midi/
+input_numpy/
+keras_models/
+output_images/
+output_midi/
+
+# IDE
+__pycache__/
+.vscode/
