@@ -91,15 +91,16 @@ def extract_relevant_data(elements):
             for nt in element.notes:
                 all_notes.append(key_properties(nt, off=off))
     # Normalize
-    return normalize(all_notes)
+    all_notes = normalize(all_notes)
+    return all_notes
 
 def normalize(all_notes):
     '''Some standardization (scale, translate so it starts at 0, round to int)
     
         Details:
-            all_notes: a list of notes (an array of arrays)
+            all_notes: an array of notes represented by arrays
 
-            returns: a list of notes (an array of arrays)'''
+            returns: an array of notes represented by arrays'''
     # Scale all note offsets and durations
     for nt in all_notes:
         nt[1] = nt[1] * SCALE
@@ -113,6 +114,34 @@ def normalize(all_notes):
         nt[2] = int(max(1, nt[2]))
         nt[3] = int(nt[3])
     return all_notes
+
+def get_frequencies(all_notes):
+    '''Counts the frequency of each letter note
+    
+        Details:
+            all_notes: an array of notes represented by arrays
+            
+            returns: a dictionary containing the frequency of each note (0:C ... 11:B)'''
+    return {}
+
+def transpose(all_notes, transpose_amt):
+    '''Transposes (shifts up/down) all notes by a given amount
+    
+        Details:
+            all_notes: an array of notes represented by arrays
+            transpose_amt: integer representing number of semitones to transpose by (+ for up, - for down)
+            
+            returns: an array of notes represented by arrays'''
+    return all_notes
+
+def detect_key(frequencies):
+    '''Detects which key is implied by the given note frequencies
+    
+        Details:
+            frequencies: a dictionary containing the frequency of each note (0:C ... 11:B)
+            
+            reeturns: an integer 0 - 11 representing the key of the music (0:C ... 11:B)'''
+    return 0
 
 def print_instruments(parts):
     '''Helpful I/O function
