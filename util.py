@@ -122,7 +122,23 @@ def get_frequencies(all_notes):
             all_notes: an array of notes represented by arrays
             
             returns: a dictionary containing the frequency of each note (0:C ... 11:B)'''
-    return {}
+    note_frequencies = {}
+    
+    # initialize values in note_frequencies
+    for i in range(12):
+        note_frequencies[i] = 0
+
+    # loop through all_notes and tally the number of times each note occurs
+    for note in all_notes:
+        for i in range(12):
+            if note[0] in range(21 + i, 127, 12):
+                note_frequencies[(i + 9) % 12] += 1
+
+    # divide every value in note_frequencues by the total number of notes to get the frequency
+    for i in range(12):
+        note_frequencies[i] /= len(all_notes)
+
+    return note_frequencies
 
 def transpose(all_notes, transpose_amt):
     '''Transposes (shifts up/down) all notes by a given amount
