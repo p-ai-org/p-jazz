@@ -130,11 +130,14 @@ def get_frequencies(all_notes):
 
     # loop through all_notes and tally the number of times each note occurs
     for note in all_notes:
-        for i in range(12):
-            if note[0] in range(21 + i, 127, 12):
-                note_frequencies[(i + 9) % 12] += 1
+        # First element of note is pitch
+        pitch = note[0]
+        # C1 = 24 and 24 % 12 = 0 so this works out
+        scale_degree = pitch % 12
+        # Add to dictionary
+        note_frequencies[scale_degree] += 1
 
-    # divide every value in note_frequencues by the total number of notes to get the frequency
+    # Divide every value in note_frequencues by the total number of notes to get the frequency
     for i in range(12):
         note_frequencies[i] /= len(all_notes)
 
