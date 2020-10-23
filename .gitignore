@@ -13,6 +13,3 @@ output_midi/
 # IDE
 __pycache__/
 .vscode/
-
-# Pretrained model
-params_cifar.ckpt

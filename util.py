@@ -1,6 +1,7 @@
 import music21
 from music21 import converter, corpus, instrument, midi, note, chord, pitch, stream
 from PIL import Image
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 import numpy as np
@@ -430,34 +431,25 @@ def spread_out_rgb(tensor):
     tensor = np.reshape(tensor, (shape[0], shape[1] * shape[2]))
     return tensor
 
-def combine_into_long_tensor(mode='bin', verbose=False, size=88):
-    '''Concatenate a bunch of files (in the numpy save dir) into one big file
+def build_dataset(verbose=False, size=88, save=False, fname='data'):
+    '''Concatenate a bunch of files (in the numpy save dir) into one binary dataset
     
         Details:
-            mode:
-                'bin' for binary (0 or 255)
-                'bin rgb' for RGB with only min or max values (e.g. 255 R, 0 G, 255 B)
-                'gray' for grayscale (0 - 255)
-                'gray rgb' for continuous RGB values (e.g. 244 R, 21 G, 93 B)
             verbose: if True, prints debug statements
             size: height of the piano roll (defaults to 88)
+            save: save the dataset to file
+            fname: name of file if saved
 
             returns: a long 2D matrix (piano roll)'''
     long_tensor = np.zeros(shape=(size, 1))
-    for dirname in os.listdir(INPUT_NUMPY_DIR):
-        if mode == 'bin':
-            long_tensor = np.hstack((long_tensor, load_numpy(dirname + '/' + dirname + '_bin.npy')))
-        elif mode == 'bin rgb':
-            long_tensor = np.hstack((long_tensor, load_numpy(dirname + '/' + dirname + '_bin_rgb.npy')))
-        elif mode == 'gray':
-            long_tensor = np.hstack((long_tensor, load_numpy(dirname + '/' + dirname + '_gray.npy')))
-        elif mode == 'gray rgb':
-            long_tensor = np.hstack((long_tensor, load_numpy(dirname + '/' + dirname + '_gray_rgb.npy')))
-        else:
-            raise Exception('Unrecognized mode \'' + mode + '\'')
+    for dirname in tqdm(os.listdir(INPUT_NUMPY_DIR)):
+        long_tensor = np.hstack((long_tensor, load_numpy(dirname + '/' + dirname + '_bin.npy')))
     if verbose:
         print('Read', len(os.listdir(INPUT_NUMPY_DIR)), 'files and concatenated', long_tensor.shape[1] - 1, 'vectors.')
-    return long_tensor[:, 1:]
+    long_tensor = long_tensor[:, 1:]
+    if save:
+        np.save('{}{}.npy'.format(BATCH_SAVE_DIR, fname), long_tensor)
+    return long_tensor
 
 def cut_non_piano_notes(tensor, inverted=False):
     '''Remove keys that aren't on a real piano
