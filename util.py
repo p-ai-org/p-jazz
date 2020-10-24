@@ -8,6 +8,7 @@ import numpy as np
 import sys
 import os
 import copy
+import sklearn.metrics.pairwise import cosine_similarity
 
 ''' SAVE DIRECTORIES '''
 # Where input MIDI files are stored
@@ -154,14 +155,40 @@ def transpose(all_notes, transpose_amt):
             returns: an array of notes represented by arrays'''
     return all_notes
 
-def detect_key(frequencies):
-    '''Detects which key is implied by the given note frequencies
+
+#helper function for the detect_key 
+def _shift_by (arr, k):
+    return np.concatenate((arr[-k:], arr[:-k]))
+
+#helper function for reference of the entire list of canonical functions
+def _get_canonical_scale():
+    arr = np.zeroes((12,12))
+    major_scale_form = np.array([1, 0, 1, 0, 1, 1, 0, 1, 0, 1]) / 7
+    for i in range(12):
+        key_frequencies = _shift_by(major_scale_form, i)
+        arr[i] = key_frequencies
+    return arr
+
+def detect_key(input_frequencies):
+    '''
+    Detects which key is implied by the given note frequencies
+    input_frequencies: an array containing the frequency of each note (0:C ... 11:B)
+    returns: an integer 0 - 11 representing the key of the music (0:C ... 11:B)
+    '''
+    canonical_scales = _get_canonical_scale() 
+
+    max_index = -1
+    max_similarity = -1
     
-        Details:
-            frequencies: a dictionary containing the frequency of each note (0:C ... 11:B)
-            
-            reeturns: an integer 0 - 11 representing the key of the music (0:C ... 11:B)'''
-    return 0
+    for i, scale in enumerate(canonical_scales):
+        similarity = cosine_similarity([input_frequencies], [scale])
+        # print(similarity)
+        if similarity > max_similarity:
+            max_index = i
+            max_similarity = similarity
+    
+    return max_index
+
 
 def print_instruments(parts):
     '''Helpful I/O function
