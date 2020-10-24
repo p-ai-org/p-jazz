@@ -7,6 +7,7 @@ import numpy as np
 import sys
 import os
 import copy
+import re
 
 ''' SAVE DIRECTORIES '''
 # Where input MIDI files are stored
@@ -34,10 +35,12 @@ MAX_KEY = 127
 # Highest pixel value (greyscale and RGB)
 MAX_PIXEL_STRENGTH = 255
 # np.set_printoptions(threshold=sys.maxsize)
+CHROMATIC_SCALE_FLATS = ['c', 'd_', 'd', 'e_', 'e', 'f', 'g_', 'g', 'a_', 'a', 'b_', 'b']
+CHROMATIC_SCALE_SHARPS = ['c', 'c#', 'd', 'd#', 'e', 'f', 'f#', 'g', 'g#', 'a', 'a#', 'b']
 
 def load_numpy(fname):
     '''Load a numpy file in the numpy save dir
-    
+
         Details:
             fname: filename (in INPUT_NUMPY_DIR)
 
@@ -46,7 +49,7 @@ def load_numpy(fname):
 
 def open_midi(midi_path):
     '''Open a midi file and return a Stream object
-    
+
         Details:
             midi_path: MIDI filename (in INPUT_MIDI_DIR)
 
@@ -59,7 +62,7 @@ def open_midi(midi_path):
 
 def key_properties(nt, off=-1):
     '''Get the properties of a particular note (pitch, offset, duration, and velocity)
-    
+
         Details:
             nt: a Note object
             off: offset (-1 means find it yourself, uses offset explicitly if given)
@@ -73,7 +76,7 @@ def key_properties(nt, off=-1):
 
 def extract_relevant_data(elements):
     '''Takes a bunch of elements and returns the normalized versions
-    
+
         Details:
             elements: a collection of notes and chords
 
@@ -95,7 +98,7 @@ def extract_relevant_data(elements):
 
 def normalize(all_notes):
     '''Some standardization (scale, translate so it starts at 0, round to int)
-    
+
         Details:
             all_notes: a list of notes (an array of arrays)
 
@@ -116,7 +119,7 @@ def normalize(all_notes):
 
 def print_instruments(parts):
     '''Helpful I/O function
-    
+
         Details:
             parts: a collection of Parts
 
@@ -127,7 +130,7 @@ def print_instruments(parts):
 
 def featurize_notes(midi, mode='binary', piano_part=-1):
     '''Turns MIDI into a tensor (matrix, in this case)
-    
+
         Details:
             midi: a collection of Parts
             mode: binary velocity or greyscale velocity (0-127)
@@ -149,7 +152,7 @@ def featurize_notes(midi, mode='binary', piano_part=-1):
 
 def get_tensor_from_part(elements, mode):
     '''Transform a bunch of elements to a tensor
-    
+
         Details:
             elements: a collection of Notes and Chords
             mode: binary velocity or greyscale velocity (0-127)
@@ -175,7 +178,7 @@ def get_tensor_from_part(elements, mode):
 
 def get_max_length(notes):
     '''Gets the the length of the song (max of offset + length)
-    
+
         Details:
             notes: a list of notes
             returns: what the width of the final tensor must be'''
@@ -184,7 +187,7 @@ def get_max_length(notes):
 
 def combine_into_rgb(tensor):
     '''Combine every three binary digits to an RGB value
-    
+
         Details:
             tensor: a 2D matrix (piano roll)
 
@@ -201,7 +204,7 @@ def combine_into_rgb(tensor):
 
 def get_image(tensor, show=False, mode='L'):
     '''Turn a tensor into an image
-    
+
         Details:
             tensor: a tensor
             show: if True, displays the image
@@ -215,7 +218,7 @@ def get_image(tensor, show=False, mode='L'):
 
 def save_image(image, fname):
     '''Save an image
-    
+
         Details:
             image: an image
             fname: a filename
@@ -225,7 +228,7 @@ def save_image(image, fname):
 
 def convert_midi_to_numpy_image(fname, piano_part=-1, verbose=False, images=True):
     '''Top-level method: runs most of the pipeline from filename to numpy and images
-    
+
         Details:
             fname: a filename (in INPUT_MIDI_DIR)
             piano_part: index of the piano Part (-1 means there's no need to specify)
@@ -240,12 +243,12 @@ def convert_midi_to_numpy_image(fname, piano_part=-1, verbose=False, images=True
     create_dir(numpy_dir)
     create_dir(image_dir)
     midi = open_midi(fname)
-    
+
     # GET TENSORS
     binary_tensor = featurize_notes(midi, mode='binary', piano_part=piano_part)
     if verbose:
         print('Binary tensor shape:', binary_tensor.shape)
-    
+
     binary_rgb_tensor = combine_into_rgb(binary_tensor)
     if verbose:
         print('Binary compressed (RGB) tensor shape:', binary_rgb_tensor.shape)
@@ -264,7 +267,7 @@ def convert_midi_to_numpy_image(fname, piano_part=-1, verbose=False, images=True
         binary_rgb_image = get_image(binary_rgb_tensor, mode='RGB')
         grayscale_image = get_image(grayscale_tensor, mode='L')
         grayscale_rgb_image = get_image(grayscale_rgb_tensor, mode='RGB')
-    
+
     # SAVE
     np.save(numpy_dir + name + '_bin.npy', binary_tensor)
     np.save(numpy_dir + name + '_bin_rgb.npy', binary_rgb_tensor)
@@ -279,7 +282,7 @@ def convert_midi_to_numpy_image(fname, piano_part=-1, verbose=False, images=True
 
 def create_dir(dirname, suppress_warnings=False):
     '''Create a directory if it doesn't exist
-    
+
         Details:
             dirname: a directory name
             suppress_warnings: if True, doesn't warn about overriding
@@ -293,11 +296,11 @@ def create_dir(dirname, suppress_warnings=False):
 
 def remove_big_gaps(tensor, threshold=SCALE*4):
     '''Remove entire measures of nothing
-    
+
         Details:
             tensor: a 2D matrix (piano roll)
             threshold: how many pixels of nothing before cutting (defaults to a measure)
-            
+
             returns: a 2D matrix (piano roll)'''
     shape = tensor.shape
     width = shape[1]
@@ -308,7 +311,7 @@ def remove_big_gaps(tensor, threshold=SCALE*4):
 
 def process_directory(dirname, piano_parts, verbose=False, override=False):
     '''High-level method for processing an entire directory of midi files
-    
+
         Details:
             dirname: a directory name to crawl through
             piano_parts: a dictionary that matches filenames to their respective piano part
@@ -333,7 +336,7 @@ def process_directory(dirname, piano_parts, verbose=False, override=False):
 
 def numpy_to_part(tensor):
     '''Backwards process: convert a tensor to a midi part
-    
+
         Details:
             tensor: a 2D matrix (piano roll)
 
@@ -361,7 +364,7 @@ def numpy_to_part(tensor):
 
 def part_to_midi(part, fname):
     '''Turn a part into a MIDI file and save it
-    
+
         Details:
             part: a Part
 
@@ -373,7 +376,7 @@ def part_to_midi(part, fname):
 
 def spread_out_rgb(tensor):
     '''Flatten a tensor with RGB values into a 2D B/W matrix (3x as long)
-    
+
         Details:
             tensor: a 3D tensor (height, width, 3 RGB values)
 
@@ -384,7 +387,7 @@ def spread_out_rgb(tensor):
 
 def combine_into_long_tensor(mode='bin', verbose=False, size=88):
     '''Concatenate a bunch of files (in the numpy save dir) into one big file
-    
+
         Details:
             mode:
                 'bin' for binary (0 or 255)
@@ -413,7 +416,7 @@ def combine_into_long_tensor(mode='bin', verbose=False, size=88):
 
 def cut_non_piano_notes(tensor, inverted=False):
     '''Remove keys that aren't on a real piano
-    
+
         Note that piano rolls with 0-indexing look inverted by default, but are NOT inverted
 
         Details:
@@ -428,7 +431,7 @@ def cut_non_piano_notes(tensor, inverted=False):
 
 def image_to_np(image, verbose=False, rotate=True):
     '''Convert an image back into a numpy array
-    
+
         Details:
             image: an image
             verbose: if True, shows the image (and other debugs)
@@ -449,13 +452,13 @@ def image_to_np(image, verbose=False, rotate=True):
         tensor = np.rot90(tensor, k=1, axes=(0, 1))
     tensor = pad_to_128(tensor, inverted=False)
     return tensor
-    
+
 def flatten_rgb(tensor):
     '''Ignore color and just make each pixel B/W
-    
+
         Details:
             tensor: a 3D tensor (height, width, 3 RGB values)
-            
+
             returns: a 2D matrix (piano roll)'''
     shape = tensor.shape
     new_tensor = np.zeros(shape=(shape[0], shape[1]))
@@ -470,7 +473,7 @@ def flatten_rgb(tensor):
 
 def pad_to_128(tensor, inverted=False):
     '''Pad to the top and bottom of the array so it's 128 tall again (add non-piano notes back in)
-    
+
         Note that piano rolls with 0-indexing look inverted by default, but are NOT inverted
 
         Details:
@@ -487,7 +490,7 @@ def pad_to_128(tensor, inverted=False):
 
 def save_image88(fname, suffix=0, verbose=False, subdir='', rotate=True):
     '''Convert an image (88 pixels tall) to a midi file and save it
-    
+
         Details:
             fname: a filename for the input image
             suffix: a suffix to append to each saved filename
@@ -500,3 +503,39 @@ def save_image88(fname, suffix=0, verbose=False, subdir='', rotate=True):
     tensor = image_to_np(image, verbose=verbose, rotate=rotate)
     part = numpy_to_part(tensor)
     part_to_midi(part, subdir + '/' + 'generated_midi_' + str(suffix))
+
+def index_to_key(i):
+    return CHROMATIC_SCALE_SHARPS[i % 12] + str(i // 12)
+
+def key_to_index(i):
+    return 12 * int(i[-1]) + indexOf(CHROMATIC_SCALE_SHARPS(i[:-1]))
+
+def midi_to_text(path):
+    ret = 'BEGIN NEW SONG\n'
+    arr = np.transpose(featurize_notes(open_midi(path), mode='binary', piano_part=0))
+    for step in arr:
+        notes = np.where(step == 1)[0]
+        if np.size(notes) != 0:
+            ret += index_to_key(notes[0])
+            for note in notes[1:]:
+                ret += ', ' + index_to_key(note)
+        else:
+            ret += 'wait'
+        ret += '\n'
+    ret += 'END SONG\n'
+    return ret
+
+def make_corpus():
+    directory = 'input_midi'
+    string = ''
+    file = open('corpus.txt',"a")
+    for entry in os.scandir(directory):
+        name = entry.path.split('\\')[1]
+        if name is not None:
+            string += midi_to_text(name)
+    return
+
+def text_to_midi(string):
+    part = np.array([])
+    arr = string.split('\n')
+    for step in arr:
