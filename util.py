@@ -2,13 +2,14 @@ import music21
 from music21 import converter, corpus, instrument, midi, note, chord, pitch, stream
 from PIL import Image
 from tqdm import tqdm
+from reference import *
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 import numpy as np
 import sys
 import os
 import copy
-import sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import cosine_similarity
 
 ''' SAVE DIRECTORIES '''
 # Where input MIDI files are stored
@@ -115,6 +116,22 @@ def normalize(all_notes):
         nt[1] = int(nt[1] - minimum)
         nt[2] = int(max(1, nt[2]))
         nt[3] = int(nt[3])
+    # Key normalize
+    all_notes = normalize_key(all_notes)
+    return all_notes
+
+def normalize_key(all_notes):
+    '''Predicts the key from note distribution and transposes to C
+    
+    Details:
+            all_notes: an array of notes represented by arrays
+
+            returns: an array of notes represented by arrays'''
+    frequencies = get_frequencies(all_notes)
+    key = detect_key(frequencies)
+    if key > 6:
+        key = 12 - key
+    all_notes = transpose(all_notes, -key)
     return all_notes
 
 def get_frequencies(all_notes):
@@ -123,12 +140,8 @@ def get_frequencies(all_notes):
         Details:
             all_notes: an array of notes represented by arrays
             
-            returns: a dictionary containing the frequency of each note (0:C ... 11:B)'''
-    note_frequencies = {}
-    
-    # initialize values in note_frequencies
-    for i in range(12):
-        note_frequencies[i] = 0
+            returns: a array containing the frequency of each note (0:C ... 11:B)'''
+    note_frequencies = np.zeros(12)
 
     # loop through all_notes and tally the number of times each note occurs
     for note in all_notes:
@@ -139,7 +152,7 @@ def get_frequencies(all_notes):
         # Add to dictionary
         note_frequencies[scale_degree] += 1
 
-    # Divide every value in note_frequencues by the total number of notes to get the frequency
+    # Divide every value in note_frequencies by the total number of notes to get the frequency
     for i in range(12):
         note_frequencies[i] /= len(all_notes)
 
@@ -153,27 +166,31 @@ def transpose(all_notes, transpose_amt):
             transpose_amt: integer representing number of semitones to transpose by (+ for up, - for down)
             
             returns: an array of notes represented by arrays'''
+    for note in all_notes:
+        note[0] += transpose_amt
     return all_notes
 
-
-#helper function for the detect_key 
+# Helper function for the detect_key 
 def _shift_by (arr, k):
     return np.concatenate((arr[-k:], arr[:-k]))
 
-#helper function for reference of the entire list of canonical functions
+# Helper function for reference of the entire list of canonical functions
 def _get_canonical_scale():
-    arr = np.zeroes((12,12))
-    major_scale_form = np.array([1, 0, 1, 0, 1, 1, 0, 1, 0, 1]) / 7
+    arr = np.zeros((12,12))
+    major_scale_form = np.array([1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1]) / 7
     for i in range(12):
         key_frequencies = _shift_by(major_scale_form, i)
         arr[i] = key_frequencies
     return arr
 
-def detect_key(input_frequencies):
+def detect_key(input_frequencies, verbose=True):
     '''
     Detects which key is implied by the given note frequencies
-    input_frequencies: an array containing the frequency of each note (0:C ... 11:B)
-    returns: an integer 0 - 11 representing the key of the music (0:C ... 11:B)
+
+    Details:
+        input_frequencies: an array containing the frequency of each note (0:C ... 11:B)
+
+        returns: an integer 0 - 11 representing the key of the music (0:C ... 11:B)
     '''
     canonical_scales = _get_canonical_scale() 
 
@@ -182,11 +199,11 @@ def detect_key(input_frequencies):
     
     for i, scale in enumerate(canonical_scales):
         similarity = cosine_similarity([input_frequencies], [scale])
-        # print(similarity)
         if similarity > max_similarity:
             max_index = i
             max_similarity = similarity
-    
+    if verbose:
+        print("Key: {}".format(max_index))
     return max_index
 
 
@@ -299,7 +316,7 @@ def save_image(image, fname):
             returns: None'''
     image.save(fname)
 
-def convert_midi_to_numpy_image(fname, piano_part=-1, verbose=False, images=True):
+def convert_midi_to_numpy_image(fname, piano_part=-1, verbose=False, images=True, do_grayscale=False):
     '''Top-level method: runs most of the pipeline from filename to numpy and images
     
         Details:
@@ -326,32 +343,36 @@ def convert_midi_to_numpy_image(fname, piano_part=-1, verbose=False, images=True
     if verbose:
         print('Binary compressed (RGB) tensor shape:', binary_rgb_tensor.shape)
 
-    grayscale_tensor = featurize_notes(midi, mode='grayscale', piano_part=piano_part)
-    if verbose:
-        print('Grayscale tensor size:', grayscale_tensor.shape)
+    if do_grayscale:
+        grayscale_tensor = featurize_notes(midi, mode='grayscale', piano_part=piano_part)
+        if verbose:
+            print('Grayscale tensor size:', grayscale_tensor.shape)
 
-    grayscale_rgb_tensor = combine_into_rgb(grayscale_tensor)
-    if verbose:
-        print('Grayscale compressed (RGB) tensor shape:', grayscale_rgb_tensor.shape)
+        grayscale_rgb_tensor = combine_into_rgb(grayscale_tensor)
+        if verbose:
+            print('Grayscale compressed (RGB) tensor shape:', grayscale_rgb_tensor.shape)
 
     # GET IMAGES
     if images:
         binary_image = get_image(binary_tensor, mode='L')
         binary_rgb_image = get_image(binary_rgb_tensor, mode='RGB')
-        grayscale_image = get_image(grayscale_tensor, mode='L')
-        grayscale_rgb_image = get_image(grayscale_rgb_tensor, mode='RGB')
+        if do_grayscale:
+            grayscale_image = get_image(grayscale_tensor, mode='L')
+            grayscale_rgb_image = get_image(grayscale_rgb_tensor, mode='RGB')
     
     # SAVE
     np.save(numpy_dir + name + '_bin.npy', binary_tensor)
     np.save(numpy_dir + name + '_bin_rgb.npy', binary_rgb_tensor)
-    np.save(numpy_dir + name + '_gray.npy', grayscale_tensor)
-    np.save(numpy_dir + name + '_gray_rgb.npy', grayscale_rgb_tensor)
+    if do_grayscale:
+        np.save(numpy_dir + name + '_gray.npy', grayscale_tensor)
+        np.save(numpy_dir + name + '_gray_rgb.npy', grayscale_rgb_tensor)
 
     if images:
         save_image(binary_image, image_dir + name + '_bin.png')
         save_image(binary_rgb_image, image_dir + name + '_bin_rgb.png')
-        save_image(grayscale_image, image_dir + name + '_gray.png')
-        save_image(grayscale_rgb_image, image_dir + name + '_gray_rgb.png')
+        if do_grayscale:
+            save_image(grayscale_image, image_dir + name + '_gray.png')
+            save_image(grayscale_rgb_image, image_dir + name + '_gray_rgb.png')
 
 def create_dir(dirname, suppress_warnings=False):
     '''Create a directory if it doesn't exist
@@ -407,7 +428,7 @@ def process_directory(dirname, piano_parts, verbose=False, override=False):
             piano_part = -1
         convert_midi_to_numpy_image(fname, verbose=verbose, piano_part=piano_part)
 
-def numpy_to_part(tensor):
+def numpy_to_part(tensor, is88=True):
     '''Backwards process: convert a tensor to a midi part
     
         Details:
@@ -423,7 +444,10 @@ def numpy_to_part(tensor):
             # Note or continuation of a note
             if tensor[key][timestep] != 0:
                 if timestep == 0 or tensor[key][timestep - 1] == 0:
-                    current_note = note.Note(key)
+                    if is88:
+                        current_note = note.Note(key + 21)
+                    else:
+                        current_note = note.Note(key)
                     current_note.volume.velocity = tensor[key][timestep] * MAX_VEL
                     current_note.offset = timestep / SCALE
                 count += 1

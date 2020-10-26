@@ -31,3 +31,9 @@ piano_parts = {
     'ishouldcare2': 0,
     'iconcentrate': 0
 }
+
+def get_piano_part(name):
+    if name not in piano_parts:
+        return 0
+    else:
+        return piano_parts[name]
