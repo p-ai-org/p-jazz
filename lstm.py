@@ -39,7 +39,7 @@ def split_sequences(sequences, n_steps):
 def load_dataset(fname):
     dataset = np.load('{}{}.npy'.format(BATCH_SAVE_DIR, fname))
     # Rotate so it's [timesteps, features]
-    dataset = np.rot90(dataset, k=3)
+    dataset = np.transpose(dataset)
     return dataset
 
 def define_model(n_features):

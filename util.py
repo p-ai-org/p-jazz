@@ -537,7 +537,7 @@ def image_to_np(image, verbose=False, rotate=True):
     if image.mode == 'RGB':
         tensor = flatten_rgb(tensor)
     if rotate:
-        tensor = np.rot90(tensor, k=1, axes=(0, 1))
+        tensor = np.transpose(tensor)
     tensor = pad_to_128(tensor, inverted=False)
     return tensor
     
