@@ -74,7 +74,7 @@ def key_properties(nt, off=-1):
     else:
         return [nt.pitch.midi, nt.offset, nt.duration.quarterLength, nt.volume.velocity]
 
-def extract_relevant_data(elements):
+def extract_relevant_data(elements, verbose=False):
     '''Takes a bunch of elements and returns the normalized versions
     
         Details:
@@ -94,10 +94,10 @@ def extract_relevant_data(elements):
             for nt in element.notes:
                 all_notes.append(key_properties(nt, off=off))
     # Normalize
-    all_notes = normalize(all_notes)
+    all_notes = normalize(all_notes, verbose=verbose)
     return all_notes
 
-def normalize(all_notes):
+def normalize(all_notes, verbose=False):
     '''Some standardization (scale, translate so it starts at 0, round to int)
     
         Details:
@@ -117,10 +117,10 @@ def normalize(all_notes):
         nt[2] = int(max(1, nt[2]))
         nt[3] = int(nt[3])
     # Key normalize
-    all_notes = normalize_key(all_notes)
+    all_notes = normalize_key(all_notes, verbose=verbose)
     return all_notes
 
-def normalize_key(all_notes):
+def normalize_key(all_notes, verbose=False):
     '''Predicts the key from note distribution and transposes to C
     
     Details:
@@ -128,7 +128,7 @@ def normalize_key(all_notes):
 
             returns: an array of notes represented by arrays'''
     frequencies = get_frequencies(all_notes)
-    key = detect_key(frequencies)
+    key = detect_key(frequencies, verbose=verbose)
     if key > 6:
         key = 12 - key
     all_notes = transpose(all_notes, -key)
@@ -183,7 +183,7 @@ def _get_canonical_scale():
         arr[i] = key_frequencies
     return arr
 
-def detect_key(input_frequencies, verbose=True):
+def detect_key(input_frequencies, verbose=False):
     '''
     Detects which key is implied by the given note frequencies
 
@@ -218,7 +218,7 @@ def print_instruments(parts):
     for i in range(len(parts)):
         print('Part ' + str(i) + ': ' + str(parts[i].getInstrument(returnDefault=False).instrumentName))
 
-def featurize_notes(midi, mode='binary', piano_part=-1):
+def featurize_notes(midi, mode='binary', piano_part=-1, verbose=False):
     '''Turns MIDI into a tensor (matrix, in this case)
     
         Details:
@@ -238,9 +238,9 @@ def featurize_notes(midi, mode='binary', piano_part=-1):
     else:
         elements = midi.parts[piano_part].flat.notes
     # Get tensor
-    return get_tensor_from_part(elements, mode=mode)
+    return get_tensor_from_part(elements, mode=mode, verbose=verbose)
 
-def get_tensor_from_part(elements, mode):
+def get_tensor_from_part(elements, mode, verbose=False):
     '''Transform a bunch of elements to a tensor
     
         Details:
@@ -249,7 +249,7 @@ def get_tensor_from_part(elements, mode):
 
             returns: a 2D matrix, like a piano roll'''
     # Get notes (including notes from chords)
-    all_notes = extract_relevant_data(elements)
+    all_notes = extract_relevant_data(elements, verbose=verbose)
     max_len = get_max_length(all_notes)
     tensor = np.zeros(shape=(128, max_len))
     # Add each note in
@@ -335,7 +335,7 @@ def convert_midi_to_numpy_image(fname, piano_part=-1, verbose=False, images=True
     midi = open_midi(fname)
     
     # GET TENSORS
-    binary_tensor = featurize_notes(midi, mode='binary', piano_part=piano_part)
+    binary_tensor = featurize_notes(midi, mode='binary', piano_part=piano_part, verbose=verbose)
     if verbose:
         print('Binary tensor shape:', binary_tensor.shape)
     
@@ -344,7 +344,7 @@ def convert_midi_to_numpy_image(fname, piano_part=-1, verbose=False, images=True
         print('Binary compressed (RGB) tensor shape:', binary_rgb_tensor.shape)
 
     if do_grayscale:
-        grayscale_tensor = featurize_notes(midi, mode='grayscale', piano_part=piano_part)
+        grayscale_tensor = featurize_notes(midi, mode='grayscale', piano_part=piano_part, verbose=verbose)
         if verbose:
             print('Grayscale tensor size:', grayscale_tensor.shape)
 
@@ -403,12 +403,11 @@ def remove_big_gaps(tensor, threshold=SCALE*4):
             tensor = np.hstack((tensor[:, :i], tensor[:, (i+threshold):]))
     return tensor
 
-def process_directory(dirname, piano_parts, verbose=False, override=False):
+def process_directory(dirname, verbose=False, override=False):
     '''High-level method for processing an entire directory of midi files
     
         Details:
             dirname: a directory name to crawl through
-            piano_parts: a dictionary that matches filenames to their respective piano part
             verbose: if True, prints debug statements
             override: if True, doesn't replace existing output folders
 
