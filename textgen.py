@@ -81,5 +81,5 @@ def text_to_midi(text, suffix):
 
 # make_corpus()
 
-# text = ''
-# text_to_midi(text, '1')
+# text = open('output.txt', 'r').read()
+# text_to_midi(text, 'TS6')
