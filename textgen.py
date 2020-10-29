@@ -6,9 +6,9 @@ CHROMATIC_SCALE_SHARPS = ['c', 'c#', 'd', 'd#', 'e', 'f', 'f#', 'g', 'g#', 'a', 
 # Change depending on your OS
 BACKSLASH = '/'
 # What goes between notes in a chord
-DELIMITER = ','
+DELIMITER = ', '
 # What goes between timesteps
-TIMESTEP = ' '
+TIMESTEP = '\n'
 # Rest
 REST = 'wait'
 #BEGIN and END tokens
@@ -79,7 +79,7 @@ def text_to_midi(text, suffix):
     part = numpy_to_part(parsed)
     part_to_midi(part, 'GPT_model_{}'.format(suffix))
 
-make_corpus()
+# make_corpus()
 
-# text = 'c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4 g2,c4,e4,g4,b4'
+# text = ''
 # text_to_midi(text, '1')
