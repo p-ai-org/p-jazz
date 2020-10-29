@@ -330,8 +330,8 @@ def convert_midi_to_numpy_image(fname, piano_part=-1, verbose=False, images=True
     numpy_dir = INPUT_NUMPY_DIR + name + '/'
     image_dir = INPUT_IMAGE_DIR + name + '/'
     # Create relevant directories
-    create_dir(numpy_dir)
-    create_dir(image_dir)
+    create_dir(numpy_dir, verbose=verbose)
+    create_dir(image_dir, verbose=verbose)
     midi = open_midi(fname)
     
     # GET TENSORS
@@ -374,7 +374,7 @@ def convert_midi_to_numpy_image(fname, piano_part=-1, verbose=False, images=True
             save_image(grayscale_image, image_dir + name + '_gray.png')
             save_image(grayscale_rgb_image, image_dir + name + '_gray_rgb.png')
 
-def create_dir(dirname, suppress_warnings=False):
+def create_dir(dirname, suppress_warnings=False, verbose=False):
     '''Create a directory if it doesn't exist
     
         Details:
@@ -385,7 +385,7 @@ def create_dir(dirname, suppress_warnings=False):
     if not os.path.isdir(dirname):
         os.mkdir(dirname)
     else:
-        if not suppress_warnings:
+        if not suppress_warnings and verbose:
             print('NOTE: Directory \'' + dirname + '\' already exists and may be overridden.')
 
 def remove_big_gaps(tensor, threshold=SCALE*4):
@@ -413,7 +413,7 @@ def process_directory(dirname, verbose=False, override=False):
 
             returns: None'''
     fnames = os.listdir(dirname)
-    for fname in fnames:
+    for fname in tqdm(fnames):
         name = fname.split('.')[0]
         if verbose:
             print('\nProcessing ' + name + '...')
