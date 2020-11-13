@@ -36,6 +36,8 @@ MAX_VEL = 127
 MAX_KEY = 127
 # Highest pixel value (greyscale and RGB)
 MAX_PIXEL_STRENGTH = 255
+# Number of piano keys
+NUM_KEYS = 88
 # np.set_printoptions(threshold=sys.maxsize)
 
 def load_numpy(fname):
@@ -170,8 +172,14 @@ def transpose(all_notes, transpose_amt):
         note[0] += transpose_amt
     return all_notes
 
-# Helper function for the detect_key 
 def _shift_by (arr, k):
+    '''Shift all elements in an array in a circular manner
+
+    Details:
+        arr: an array
+        k: number of "shifts"
+        
+        returns: an array'''
     return np.concatenate((arr[-k:], arr[:-k]))
 
 # Helper function for reference of the entire list of canonical functions
@@ -481,7 +489,7 @@ def spread_out_rgb(tensor):
     tensor = np.reshape(tensor, (shape[0], shape[1] * shape[2]))
     return tensor
 
-def build_dataset(verbose=False, size=88, save=False, fname='data'):
+def build_dataset(verbose=False, size=NUM_KEYS, save=False, fname='data'):
     '''Concatenate a bunch of files (in the numpy save dir) into one binary dataset
     
         Details:
@@ -590,3 +598,105 @@ def save_image88(fname, suffix=0, verbose=False, subdir='', rotate=True):
     tensor = image_to_np(image, verbose=verbose, rotate=rotate)
     part = numpy_to_part(tensor)
     part_to_midi(part, subdir + '/' + 'generated_midi_' + str(suffix))
+
+def plot_history(history):
+    '''Plots the loss from a keras history
+    
+        Details:
+            history: a history dictionary from keras model.fit()
+
+            returns: None'''
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.show()
+
+def remove_leading_zeros(arr):
+    '''Removes rows of all 0s at the beginning of an array
+    
+        Details:
+            arr: a numpy array (likely in (timestep, features))
+
+            returns: a numpy array'''
+    cut_amt = -1
+    for i in range(len(arr)):
+        if max(arr[i]) == 0:
+            cut_amt = i
+        else:
+            break
+    return arr[cut_amt+1:]
+
+def get_phrases(piano_roll, min_quarter_notes=2, max_quarter_notes=8, quarter_note_split = 0.25):
+    '''Converts a piano roll into an array of phrases using the Hartono method
+
+        Note that the phrases have 89 features to account for an endsequence bit (bit 88)
+
+        TODO: Trash phrases that go over max and wait for a new break?
+    
+        Details:
+            piano_roll: a numpy array (likely in (features, timestep))
+            min_quarter_notes: the minimum number of quarter notes a phrase can be
+            max_quarter_notes: the maximum number of quarter notes a phrase can be
+            quarter_note_split: how many quarter notes of rest before calling a new phrase
+
+            returns: a numpy array in (phrases, timesteps, features)'''
+    # (timestep, features)
+    p_r = np.transpose(piano_roll)
+    # Count no. of times we hit cutoff
+    cutoff_counter = 0
+    # Pad piano roll to 89
+    piano_roll = np.zeros((p_r.shape[0], NUM_KEYS + 1))
+    piano_roll[:p_r.shape[0], :p_r.shape[1]] = p_r
+    # Amount after which we look for a gap
+    threshold = SCALE * min_quarter_notes
+    # Arbitrarily choose an eighth note as enough of a rest
+    gap_threshold = int(SCALE * quarter_note_split)
+    # At some point you need to stop
+    cutoff = SCALE * max_quarter_notes
+    phrases = np.zeros(shape=(1, cutoff, NUM_KEYS + 1))
+    # End token
+    endtoken = np.zeros((1, NUM_KEYS + 1))
+    endtoken[0, NUM_KEYS] = 1
+    # Iterate through timesteps
+    pause_counter = 0
+    current_phrase = np.zeros((1, NUM_KEYS + 1))
+    for i in range(len(piano_roll)):
+        # Get vector representing all the notes at this timestep
+        timestep = piano_roll[i]
+        # Get highest value (interested in if it's 0)
+        maximum = max(timestep)
+        if maximum == 0 or len(current_phrase) >= cutoff - 1:
+            pause_counter += 1
+            # If gap is long enough to make a phrase and phrase iteself is long enough OR hit cutoff
+            long_break = (pause_counter >= gap_threshold and len(current_phrase) >= threshold)
+            hit_cutoff = len(current_phrase) >= cutoff - 1
+            if hit_cutoff:
+                cutoff_counter += 1
+            if long_break or hit_cutoff:
+                # Take out zeros at beginning
+                current_phrase = remove_leading_zeros(current_phrase)
+                # If we stopped from a long break, remove that long break
+                if long_break:
+                    current_phrase = current_phrase[1:-gap_threshold+1]
+                # Add endtoken
+                current_phrase = np.concatenate((current_phrase, endtoken), axis=0)
+                # Pad to cutoff
+                padded_current_phrase = np.zeros((cutoff, NUM_KEYS + 1))
+                padded_current_phrase[:current_phrase.shape[0], :current_phrase.shape[1]] = current_phrase
+                # Add this phrase to running phrases
+                phrases = np.concatenate((phrases, [padded_current_phrase]), axis=0) 
+                # Reset variables
+                current_phrase = np.zeros((1, NUM_KEYS + 1))
+                pause_counter = 0
+        else:
+            # Just reset the counter
+            pause_counter = 0
+        # Add this timestep to running timesteps
+        current_phrase = np.concatenate((current_phrase, [timestep]), axis=0)
+    print('Fraction at cutoff: ', cutoff_counter / (len(phrases)-1))
+    return phrases[1:]
+
+
