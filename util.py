@@ -647,6 +647,8 @@ def get_phrases(piano_roll, min_quarter_notes=2, max_quarter_notes=8, quarter_no
     p_r = np.transpose(piano_roll)
     # Count no. of times we hit cutoff
     cutoff_counter = 0
+    # boolean to see what state (cut-off or not) we are in
+    in_cutoff_state = False
     # Pad piano roll to 89
     piano_roll = np.zeros((p_r.shape[0], NUM_KEYS + 1))
     piano_roll[:p_r.shape[0], :p_r.shape[1]] = p_r
@@ -668,35 +670,42 @@ def get_phrases(piano_roll, min_quarter_notes=2, max_quarter_notes=8, quarter_no
         timestep = piano_roll[i]
         # Get highest value (interested in if it's 0)
         maximum = max(timestep)
-        if maximum == 0 or len(current_phrase) >= cutoff - 1:
+        hit_cutoff = len(current_phrase) >= cutoff - 1   
+
+        if maximum == 0: 
             pause_counter += 1
             # If gap is long enough to make a phrase and phrase iteself is long enough OR hit cutoff
             long_break = (pause_counter >= gap_threshold and len(current_phrase) >= threshold)
-            hit_cutoff = len(current_phrase) >= cutoff - 1
-            if hit_cutoff:
-                cutoff_counter += 1
             if long_break or hit_cutoff:
-                # Take out zeros at beginning
-                current_phrase = remove_leading_zeros(current_phrase)
-                # If we stopped from a long break, remove that long break
-                if long_break:
+                if long_break and in_cutoff_state:
+                    in_cutoff_state = False
+
+                else:
+                    # Take out zeros at beginning
+                    current_phrase = remove_leading_zeros(current_phrase)
+                    # If we stopped from a long break, remove that long break
                     current_phrase = current_phrase[1:-gap_threshold+1]
-                # Add endtoken
-                current_phrase = np.concatenate((current_phrase, endtoken), axis=0)
-                # Pad to cutoff
-                padded_current_phrase = np.zeros((cutoff, NUM_KEYS + 1))
-                padded_current_phrase[:current_phrase.shape[0], :current_phrase.shape[1]] = current_phrase
-                # Add this phrase to running phrases
-                phrases = np.concatenate((phrases, [padded_current_phrase]), axis=0) 
+                    # Add endtoken
+                    current_phrase = np.concatenate((current_phrase, endtoken), axis=0)
+                    # Pad to cutoff
+                    padded_current_phrase = np.zeros((cutoff, NUM_KEYS + 1))
+                    padded_current_phrase[:current_phrase.shape[0], :current_phrase.shape[1]] = current_phrase
+                    # Add this phrase to running phrases
+                    phrases = np.concatenate((phrases, [padded_current_phrase]), axis=0) 
+                    if hit_cutoff:
+                        in_cutoff_state = True
                 # Reset variables
                 current_phrase = np.zeros((1, NUM_KEYS + 1))
                 pause_counter = 0
         else:
             # Just reset the counter
             pause_counter = 0
-        # Add this timestep to running timesteps
-        current_phrase = np.concatenate((current_phrase, [timestep]), axis=0)
-    print('Fraction at cutoff: ', cutoff_counter / (len(phrases)-1))
+
+        if not in_cutoff_state:
+            # Add this timestep to running timesteps
+            current_phrase = np.concatenate((current_phrase, [timestep]), axis=0)
+
+    # print('Fraction at cutoff: ', cutoff_counter / (len(phrases)-1))
     return phrases[1:]
 
 
