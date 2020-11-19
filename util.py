@@ -665,33 +665,33 @@ def get_phrases(piano_roll, min_quarter_notes=2, max_quarter_notes=8, quarter_no
     # Iterate through timesteps
     pause_counter = 0
     current_phrase = np.zeros((1, NUM_KEYS + 1))
-    for i in range(len(piano_roll)):
+    for i in tqdm(range(len(piano_roll))):
         # Get vector representing all the notes at this timestep
         timestep = piano_roll[i]
         # Get highest value (interested in if it's 0)
         maximum = max(timestep)
         hit_cutoff = len(current_phrase) >= cutoff - 1   
-
-        if maximum == 0: 
+        if maximum == 0 or hit_cutoff: 
             pause_counter += 1
             # If gap is long enough to make a phrase and phrase iteself is long enough OR hit cutoff
-            long_break = (pause_counter >= gap_threshold and len(current_phrase) >= threshold)
+            long_break = (pause_counter >= gap_threshold)
+            # print(long_break, hit_cutoff, in_cutoff_state)
             if long_break or hit_cutoff:
                 if long_break and in_cutoff_state:
                     in_cutoff_state = False
-
                 else:
-                    # Take out zeros at beginning
-                    current_phrase = remove_leading_zeros(current_phrase)
-                    # If we stopped from a long break, remove that long break
-                    current_phrase = current_phrase[1:-gap_threshold+1]
-                    # Add endtoken
-                    current_phrase = np.concatenate((current_phrase, endtoken), axis=0)
-                    # Pad to cutoff
-                    padded_current_phrase = np.zeros((cutoff, NUM_KEYS + 1))
-                    padded_current_phrase[:current_phrase.shape[0], :current_phrase.shape[1]] = current_phrase
-                    # Add this phrase to running phrases
-                    phrases = np.concatenate((phrases, [padded_current_phrase]), axis=0) 
+                    if len(current_phrase) >= threshold:
+                        # Take out zeros at beginning
+                        current_phrase = remove_leading_zeros(current_phrase)
+                        # If we stopped from a long break, remove that long break
+                        current_phrase = current_phrase[1:-gap_threshold+1]
+                        # Add endtoken
+                        current_phrase = np.concatenate((current_phrase, endtoken), axis=0)
+                        # Pad to cutoff
+                        padded_current_phrase = np.zeros((cutoff, NUM_KEYS + 1))
+                        padded_current_phrase[:current_phrase.shape[0], :current_phrase.shape[1]] = current_phrase
+                        # Add this phrase to running phrases
+                        phrases = np.concatenate((phrases, [padded_current_phrase]), axis=0) 
                     if hit_cutoff:
                         in_cutoff_state = True
                 # Reset variables
