@@ -29,7 +29,7 @@ OUTPUT_IMAGE_DIR = 'output_images/'
 
 ''' OTHER CONSTANTS '''
 # Quarter note scale (1 quarter note is split up into 12 pixels for accuracy)
-SCALE = 12
+SCALE = 6
 # Maximum velocity
 MAX_VEL = 127
 # Highest key
@@ -753,9 +753,38 @@ def get_melody(path):
             count += 1
             
     return np.transpose(melody)
+
+def extract_melody(arr, start_threshold=40, difference_threshold=12, quarter_note_reset=2):
+    # Transpose to (timesteps, keys)
+    arr = np.transpose(arr)
+    melody = np.zeros(arr.shape)
+    # -1 represents no (recent) last melody
+    last_melody_note = -1
+    # How long of no melody before resetting last_melody_note
+    reset_threshold = quarter_note_reset * SCALE
+    break_counter = 0
+    for i, step in enumerate(arr):
+        max_index = np.max(np.where(step == 1)[0]) if 1 in step else -1
+        # There's at least one note played
+        if max_index != -1:
+            # No recent melody played and this note is above the start treshold
+            start_new_melody = last_melody_note == -1 and max_index > start_threshold
+            # There is a recent melody and this one is either above it or within a threshold below it
+            within_threshold = last_melody_note != -1 and last_melody_note - max_index < difference_threshold
+            if start_new_melody or within_threshold:
+                melody[i][max_index] = 1
+                arr[i][max_index] = 0
+                last_melody_note = max_index
+            # No new melody note added
+            else:
+                break_counter += 1
+                # Reset last_melody_note (to allow lower starting melodies)
+                if break_counter >= reset_threshold:
+                    break_counter = 0
+                    last_melody_note = -1
+    return np.transpose(arr), np.transpose(melody)
         
-
-        
-
-
-    
+def clean_output_numpy(arr, threshold=0.4):
+    for i in range(len(arr)):
+        arr[i] = np.array([(lambda x: 1 if (x>threshold) else 0)(x) for x in arr[i]])
+    return arr[:,:-2]
