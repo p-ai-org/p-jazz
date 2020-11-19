@@ -708,4 +708,54 @@ def get_phrases(piano_roll, min_quarter_notes=2, max_quarter_notes=8, quarter_no
     # print('Fraction at cutoff: ', cutoff_counter / (len(phrases)-1))
     return phrases[1:]
 
+def get_melody(path):
+    """
+    Extracts the melody from an array of notes. 
 
+    Details:
+        path: path of numpy array to extract the melody from
+        returns: an array containing only the melody
+    """
+    # lower allowed melody note (middle C)
+    cutoff_number = 60
+    # largest allowed melodic jump (one octave)
+    largest_jump = 12
+    melody = np.transpose(np.zeros(np.load(path).shape))
+    arr = np.transpose(np.load(path))
+    count = 0
+
+    for step in arr:
+        # get the highest note played at the given timestep
+        high_note = np.max(np.where(step == 1.0)[0]) if 1.0 in step else 0
+        # create a timestep for the melody containing only the highest note
+        melody_step = np.zeros((88,))
+        if high_note != 0:
+            melody_step[high_note] = 1
+
+        if count == 0:
+            # append highest note to melody only if note is at or above cutoff note
+            if high_note >= cutoff_number:
+                melody[count] = melody_step
+            else:
+                melody[count] = np.zeros((88,))
+            count += 1
+        else:
+            # get the melody note from the previous timestep
+            prev_note = np.max(np.where(melody[count-1] == 1.0)[0]) if 1.0 in melody[count-1] else 0
+            # append highest note to melody if its higher than the previous melody note
+            if high_note >= prev_note and high_note >= cutoff_number:
+                melody[count] = melody_step
+            # append highest note to melody if its an octave or less below the previous melody note 
+            elif prev_note - high_note <= largest_jump and high_note >= cutoff_number:
+                melody[count] = melody_step
+            else:
+                melody[count] = np.zeros((88,))
+            count += 1
+            
+    return np.transpose(melody)
+        
+
+        
+
+
+    
