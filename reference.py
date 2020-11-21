@@ -29,7 +29,24 @@ piano_parts = {
     'ivegrownacc': 0,
     'ineverknew': 0,
     'ishouldcare2': 0,
-    'iconcentrate': 0
+    'iconcentrate': 0,
+    'maids': 0,
+    'milestones': 1,
+    'ladiesinmercedes': 0,
+    'manteca': 0,
+    'moonandsand': 0,
+    'laura': 0,
+    'lovercome': 0,
+    'itsalmost': 0,
+    'lullaby': 0,
+    'myoldflame': 0,
+    'miyako': 0,
+    'myshininghour': 0,
+    'somethingwonderful': 0,
+    'peoplewillsay': 0,
+    'sixteengoing': 0,
+    'onceupona': 0,
+    'periscope': 0,
 }
 
 def get_piano_part(name):

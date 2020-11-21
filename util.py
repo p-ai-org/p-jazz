@@ -214,6 +214,11 @@ def detect_key(input_frequencies, verbose=False):
         print("Key: {}".format(max_index))
     return max_index
 
+def inferPart(parts):
+    for i in range(len(parts)):
+        if parts[i].getInstrument(returnDefault=False).instrumentName == 'Piano':
+            return i
+    return -1
 
 def print_instruments(parts):
     '''Helpful I/O function
@@ -237,10 +242,25 @@ def featurize_notes(midi, mode='binary', piano_part=-1, verbose=False):
             returns: a 2D matrix, like a piano roll'''
     # If there's more than one part and we're not told which to use
     if len(midi.parts) != 1 and piano_part == -1:
-        print_instruments(midi.parts)
-        raise Exception('Expected only 1 part but got ' + str(len(midi.parts)) + ' instead')
+        # See if one of the instruments is named Piano
+        try:
+            inferred = inferPart(midi.parts)
+        except:
+            # Exceptions happen for some reason, usually piano is part 0
+            piano_part = 0
+            if verbose:
+                print('[WARNING]: Guessed 0. Error occurred when parsing parts.')
+        # No error, use inferred if it found a piano part
+        else:
+            if inferred != -1:
+                piano_part = inferred
+            else:
+                piano_part = 0
+                if verbose:
+                    print('[WARNING]: Guessed 0. Parts shown below:')
+                    print_instruments(midi.parts)
     # Only one part
-    elif len(midi.parts) == 1:
+    if len(midi.parts) == 1:
         elements = midi.parts[0].flat.notes
     # Use specified part
     else:
@@ -423,6 +443,8 @@ def process_directory(dirname, verbose=False, override=False):
     fnames = os.listdir(dirname)
     for fname in tqdm(fnames):
         name = fname.split('.')[0]
+        if name == '':
+            continue
         if verbose:
             print('\nProcessing ' + name + '...')
         if not override and os.path.isdir(INPUT_NUMPY_DIR + name) and len(os.listdir(INPUT_NUMPY_DIR + name)) != 0:
