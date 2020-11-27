@@ -12,7 +12,6 @@ To see the current MIDI files used to train the models of our project, see [here
 We experimented with several different types of models, but eventually settled on two main routes: text generation by finetuning GPT2 and sequence2sequence generation with an encoder-decoder LSTM model.
 
 ## Reproducability / Setup
-<hr>
 
 1. Install the required dependencies
 
@@ -31,7 +30,6 @@ We experimented with several different types of models, but eventually settled o
 From here, you should be able to run and modify `lstm.py` (many-to-one generation), `encoder_decoder.py` (seq2seq generation), and `textgen.py` (encoding and decoding MIDI to text for GPT2 processing).
 
 ## Results & Discussion
-<hr>
 
 ### Using [GPT2](https://openai.com/blog/better-language-models/): 
 
@@ -96,7 +94,7 @@ However, gradient descent led our model to simply predict the previous timestep.
 We suspected that our high resolution was partly to blame for this result. To demonstrate this, we lowered our resolution to 2 timesteps/quarter note, and observed some variation in the output. While not unpleasant, these predictions were rhythmically too slow to be satisfactory, and still suffered the same issue of prolonged notes.
 
 <div style="text-align: center;">
-  <img src='img/lstm_not-bad1.png' width="300"/> <img src='img/lstm_not-bad2.png' width="300"/> <img src='img/lstm_not-bad3.png' width="300"/>
+  <img src='img/lstm_not-bad1.png' width="100"/> <img src='img/lstm_not-bad2.png' width="100"/> <img src='img/lstm_not-bad3.png' width="100"/>
 </div>
 
 As a result, we chose to switch to the sequence-to-sequence encoder-decoder LSTM model. Typically, this model is used for translation-related tasks. While there is no such algorithm to "translate" from one musical phrase to the next, we hypothesized that this model may be able to at least recognize some patterns about musical phrases and mimic preceeding phrases. Our challenge was then than how to divide our music into these "phrases" (a sequence).
