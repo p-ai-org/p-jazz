@@ -94,7 +94,7 @@ However, gradient descent led our model to simply predict the previous timestep.
 We suspected that our high resolution was partly to blame for this result. To demonstrate this, we lowered our resolution to 2 timesteps/quarter note, and observed some variation in the output. While not unpleasant, these predictions were rhythmically too slow to be satisfactory, and still suffered the same issue of prolonged notes.
 
 <div style="text-align: center;">
-  <img src='img/lstm_not-bad1.png' width="100"/> <img src='img/lstm_not-bad2.png' width="100"/> <img src='img/lstm_not-bad3.png' width="100"/>
+  <img src='img/lstm_not-bad1.png' width="200"/> <img src='img/lstm_not-bad2.png' width="200"/> <img src='img/lstm_not-bad3.png' width="200"/>
 </div>
 
 As a result, we chose to switch to the sequence-to-sequence encoder-decoder LSTM model. Typically, this model is used for translation-related tasks. While there is no such algorithm to "translate" from one musical phrase to the next, we hypothesized that this model may be able to at least recognize some patterns about musical phrases and mimic preceeding phrases. Our challenge was then than how to divide our music into these "phrases" (a sequence).
