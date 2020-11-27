@@ -42,4 +42,4 @@ We experimented with several different types of models, but eventually settled o
 - Jazz as a genre is also tricky to analyze because there exists a huge variety of the styles it can be played in, and the use of syncopation and swing, fast runs vs the short runs makes it difficult to represent in code. We also faced some normalisation issues because of the chromaticism in jazz, that makes it hard to standardise the keys the music were played in.
 
 
-############# _This project was partly done as a final project for a course with [Professor Mike Izbicki](http://izbicki.me) at Claremont McKenna College._
+_This project was partly done as a final project for a course with [Professor Mike Izbicki](http://izbicki.me) at Claremont McKenna College._
