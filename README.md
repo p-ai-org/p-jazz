@@ -14,7 +14,7 @@ We experimented with several different types of models, but eventually settled o
 #### Using [GPT2](https://openai.com/blog/better-language-models/): 
 
 - The first attempt was taking each timestep and turning each bit (aka a note) into a word, a word-interpretation of the piano roll and assigned weights to it for rests. 
-<img src='img/textgen_no-preprocess.PNG' width="350" height="425"/>
+<img src='img/textgen_no-preprocess.PNG' width="300" height="425"/>
 
 - We then tried to use an on-and-off method. For this method, we only indicated when a note started and when it ended.  As opposed to the every-timestep version where we were being very explicit about all the notes that are being played at any given time. 
 <img src='img/textgen_on-off-text.PNG' width="350" />
