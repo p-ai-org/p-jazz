@@ -6,18 +6,23 @@ CHROMATIC_SCALE_SHARPS = ['c', 'c#', 'd', 'd#', 'e', 'f', 'f#', 'g', 'g#', 'a', 
 # Change depending on your OS
 BACKSLASH = '/'
 # What goes between notes in a chord
-DELIMITER = ', '
+DELIMITER = ' '
 # What goes between timesteps
 TIMESTEP = '\n'
 # Rest
 REST = 'w'
+# Measure break
+MEASURE = '|'
 # BEGIN and END tokens
-BEGIN = '<|startoftext|>'
-END = '<|endoftext|>'
+BEGIN = 'START'
+END = 'END'
 # Note ON/OFF suffixes
 ON = '<'
 TAP = '^'
 OFF = '>'
+
+# Resolution
+SCALE = 6
 
 def index_to_key(index):
     ''' Convert an index 0-87 to a note (0 --> A0, 3 --> C1, etc) '''
@@ -60,7 +65,7 @@ def numpy_to_text(arr, phrases=False):
         ret += TIMESTEP
     return ret
 
-def numpy_to_text_onoff(arr, phrases=False):
+def numpy_to_text_onoff(arr, phrases=False, measureBar=False):
     '''
     Convert a numpy path to text using on / off notation
 
@@ -98,11 +103,16 @@ def numpy_to_text_onoff(arr, phrases=False):
         else:
             # Cut out the last delimiter
             ret += timestep_string[:-len(DELIMITER)]
+        if measureBar and (i + 1) % (SCALE * 4) == 0:
+            ret += TIMESTEP + MEASURE
         ret += TIMESTEP
+    if measureBar:
+        left_in_measure = ((SCALE * 4) - (i + 1)) % (SCALE * 4)
+        for i in range(left_in_measure):
+            ret += REST + TIMESTEP
     return ret
 
-
-def make_corpus(verbose=False, input_dir=INPUT_NUMPY_DIR, fname='corpus.txt', onoff=False):
+def make_corpus(verbose=False, input_dir=INPUT_NUMPY_DIR, fname='{}corpus.txt'.format(INPUT_TEXT_DIR), onoff=False, measureBar=False):
     '''
     Construct corpus from input numpy directory
 
@@ -120,15 +130,17 @@ def make_corpus(verbose=False, input_dir=INPUT_NUMPY_DIR, fname='corpus.txt', on
     for fname in tqdm(os.listdir(input_dir)):
         if verbose:
             print(fname)
-        full_path = "{}{}/{}_bin.npy".format(INPUT_NUMPY_DIR, fname, fname)
+        full_path = "{}{}/{}_bin.npy".format(input_dir, fname, fname)
         arr = np.transpose(np.load(full_path))
+        file.write(BEGIN + TIMESTEP)
         if onoff:
-            file.write(numpy_to_text_onoff(arr))
+            file.write(numpy_to_text_onoff(arr, measureBar=measureBar))
         else:
             file.write(numpy_to_text(arr))
+        file.write(END + TIMESTEP)
     file.close()
 
-def make_phrase_corpus(fname='phrases.txt', onoff=False, load_fname='phrases.npy'):
+def make_phrase_corpus(fname='{}phrases.txt'.format(INPUT_TEXT_DIR), onoff=False, load_fname='phrases.npy'):
     '''
     Construct corpus from input numpy directory using phrases
 
@@ -189,7 +201,7 @@ def text_to_numpy_onoff(text):
     # Keep track of which notes we're supposed to keep filling in
     obligations = np.zeros(88)
     for token in tokens:
-        if token in [BEGIN, END]:
+        if token in [BEGIN, END, MEASURE]:
             continue
         this_timestep = np.zeros(88)
         # Set all obligations
@@ -236,9 +248,9 @@ def text_to_midi(text, suffix, onoff=False):
     part_to_midi(part, 'GPT_model_{}'.format(suffix))
 
 ''' MAKE CORPUS '''
-# make_corpus(fname='corpus_onoff.txt', onoff=True)
-# make_phrase_corpus(fname='phrases.txt', onoff=True)
+make_corpus(fname='{}corpus_plain.txt'.format(INPUT_TEXT_DIR), onoff=False, measureBar=True)
+# make_phrase_corpus(fname='{}phrases.txt'.format(INPUT_TEXT_DIR), onoff=True)
 
 ''' READ OUTPUT '''
-# text = open('output.txt', 'r').read()
+# text = open('{}output.txt'.format(INPUT_TEXT_DIR), 'r').read()
 # text_to_midi(text, '1', onoff=True)

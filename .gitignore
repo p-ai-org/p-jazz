@@ -2,14 +2,20 @@
 venv/
 
 # Data folders
-batched_data/
+numpy_corpus/
 input_images/
 input_midi/
 input_numpy/
+input_text/
 keras_models/
 output_images/
 output_midi/
+output_numpy/
+classical_*
 
 # IDE
 __pycache__/
 .vscode/
+
+# Generated files
+*.npy

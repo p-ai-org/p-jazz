@@ -18,12 +18,14 @@ INPUT_MIDI_DIR = 'input_midi/'
 INPUT_IMAGE_DIR = 'input_images/'
 # Where input numpy arrays are stored
 INPUT_NUMPY_DIR = 'input_numpy/'
+# Where input text is stored (e.g. for GPT)
+INPUT_TEXT_DIR = 'input_text/'
 # Where output MIDI files are stored
 OUTPUT_MIDI_DIR = 'output_midi/'
 # Where keras models are stored
 MODEL_SAVE_DIR = 'keras_models/'
-# Where batched arrays are stored
-BATCH_SAVE_DIR = 'batched_data/'
+# Where entire corpuses are stored
+NUMPY_CORPUS_DIR = 'numpy_corpus/'
 # Where generated images are stored
 OUTPUT_IMAGE_DIR = 'output_images/'
 
@@ -49,7 +51,7 @@ def load_numpy(fname):
             returns: numpy array'''
     return np.load(INPUT_NUMPY_DIR + fname)
 
-def open_midi(midi_path):
+def open_midi(midi_path, prefix=''):
     '''Open a midi file and return a Stream object
     
         Details:
@@ -57,7 +59,7 @@ def open_midi(midi_path):
 
             returns: Stream object'''
     mf = midi.MidiFile()
-    mf.open(INPUT_MIDI_DIR + midi_path)
+    mf.open(prefix + INPUT_MIDI_DIR + midi_path)
     mf.read()
     mf.close()
     return midi.translate.midiFileToStream(mf)
@@ -216,7 +218,7 @@ def detect_key(input_frequencies, verbose=False):
 
 def inferPart(parts):
     for i in range(len(parts)):
-        if parts[i].getInstrument(returnDefault=False).instrumentName == 'Piano':
+        if parts[i].getInstrument(returnDefault=False).instrumentName in ['Piano right', 'Piano']:
             return i
     return -1
 
@@ -344,7 +346,7 @@ def save_image(image, fname):
             returns: None'''
     image.save(fname)
 
-def convert_midi_to_numpy_image(fname, piano_part=-1, verbose=False, images=True, do_grayscale=False):
+def convert_midi_to_numpy_image(fname, piano_part=-1, verbose=False, images=True, do_grayscale=False, prefix=''):
     '''Top-level method: runs most of the pipeline from filename to numpy and images
     
         Details:
@@ -355,12 +357,12 @@ def convert_midi_to_numpy_image(fname, piano_part=-1, verbose=False, images=True
 
             returns: None'''
     name = fname.split('.')[0]
-    numpy_dir = INPUT_NUMPY_DIR + name + '/'
-    image_dir = INPUT_IMAGE_DIR + name + '/'
+    numpy_dir = prefix + INPUT_NUMPY_DIR + name + '/'
+    image_dir = prefix + INPUT_IMAGE_DIR + name + '/'
     # Create relevant directories
     create_dir(numpy_dir, verbose=verbose)
     create_dir(image_dir, verbose=verbose)
-    midi = open_midi(fname)
+    midi = open_midi(fname, prefix=prefix)
     
     # GET TENSORS
     binary_tensor = featurize_notes(midi, mode='binary', piano_part=piano_part, verbose=verbose)
@@ -431,7 +433,7 @@ def remove_big_gaps(tensor, threshold=SCALE*4):
             tensor = np.hstack((tensor[:, :i], tensor[:, (i+threshold):]))
     return tensor
 
-def process_directory(dirname, verbose=False, override=False):
+def process_directory(dirname, verbose=False, override=False, prefix=''):
     '''High-level method for processing an entire directory of midi files
     
         Details:
@@ -447,7 +449,7 @@ def process_directory(dirname, verbose=False, override=False):
             continue
         if verbose:
             print('\nProcessing ' + name + '...')
-        if not override and os.path.isdir(INPUT_NUMPY_DIR + name) and len(os.listdir(INPUT_NUMPY_DIR + name)) != 0:
+        if not override and os.path.isdir(prefix + INPUT_NUMPY_DIR + name) and len(os.listdir(prefix + INPUT_NUMPY_DIR + name)) != 0:
             if verbose:
                 print('Skipping \'' + name + '\' because there exists a directory in its name with files inside.')
             continue
@@ -455,7 +457,7 @@ def process_directory(dirname, verbose=False, override=False):
             piano_part = piano_parts[name]
         else:
             piano_part = -1
-        convert_midi_to_numpy_image(fname, verbose=verbose, piano_part=piano_part)
+        convert_midi_to_numpy_image(fname, verbose=verbose, piano_part=piano_part, prefix=prefix)
 
 def numpy_to_part(tensor, is88=True):
     '''Backwards process: convert a tensor to a midi part
@@ -528,7 +530,7 @@ def build_dataset(verbose=False, size=NUM_KEYS, save=False, fname='data'):
         print('Read', len(os.listdir(INPUT_NUMPY_DIR)), 'files and concatenated', long_tensor.shape[1] - 1, 'vectors.')
     long_tensor = long_tensor[:, 1:]
     if save:
-        np.save('{}{}.npy'.format(BATCH_SAVE_DIR, fname), long_tensor)
+        np.save('{}{}.npy'.format(NUMPY_CORPUS_DIR, fname), long_tensor)
     return long_tensor
 
 def cut_non_piano_notes(tensor, inverted=False):
