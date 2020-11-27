@@ -15,8 +15,10 @@ We experimented with several different types of models, but eventually settled o
 
 - The first attempt was taking each timestep and turning each bit (aka a note) into a word, a word-interpretation of the piano roll and assigned weights to it for rests. 
 <img src='img/textgen_no-preprocess.PNG' width="350" />
+
 - We then tried to use an on-and-off method. For this method, we only indicated when a note started and when it ended.  As opposed to the every-timestep version where we were being very explicit about all the notes that are being played at any given time. 
 <img src='img/textgen_on-off-text.PNG' width="350" />
+
 - The learning was slow at first but there seems to be an improvement. Qualitatively, it just sounded more musical, partly because it played fewer notes and held them for longer. While we can't exactly look into the model and point out exactly why this model works better, we can reason that with the original pre-processing method, there's no concept of notes being held, only played at every timestep, so that likely resulted in it mimicking that, instead of holding out single notes. Also, on/off is just closer to representing what's actually happening in the music, so it's felt more intuitive to proceed with the training model in this way.
 - We then tried using the model to train saxophone solo pieces as well as classical music pieces to see how this would change the outputs. We're still working on running tests on this method.
 - We also tried to construct a model to separate melody and harmony to see how generating these separately would impact the output. We had a decent heuristic for separating the melody from the harmony, but our challenge was in choosing the right architecture to train both in parallel, which we weren't able to design in our limited time.
@@ -25,9 +27,10 @@ We experimented with several different types of models, but eventually settled o
 
 - We started off with using a many-to-one LSTM model. We took the entire corpus of piano rolls as training data and trained a stack LSTM to predict the next timestep from (in our test runs) the last 24 timesteps.
 - However, the loss function led it to just predict the previous timestep (so it looked like the last note played was held down for the entirety of the prediction), since technically that was not a wrong option the vast majority of the time. 
-<img src='img/lstm_note-held-forever.png'width="350" />
+<img src='img/lstm_note-held-forever.png' width="350" />
+
 - After letting the many-to-one model run a little more, we found that the results it produces is not actually too bad as previously mentioned. Its predictions are just very slow rhythmically compared to what preceeds it (the training set).
-<img src='img/lstm_not-bad1.png' width="350"/> <img src='img/lstm_not-bad2.png' width="350"/> <img src='img/lstm_not-bad3.png' width="350"/>
+<img src='img/lstm_not-bad1.png' width="300"/> <img src='img/lstm_not-bad2.png' width="300"/> <img src='img/lstm_not-bad3.png' width="300"/>
 
 - Then we decided to switch over to using the sequence-to-sequence encoder-decoder LSTM model. We hypothesised that it would make more sense, given the ordered, sequential nature of music. Typically, this model is used for translation-related tasks. The challenge in applying it to music piano rolls was then than how to cut up these "phrases" (a sequence).
 - Our current algorithm takes note of when a pause (timesteps where no notes are being played) is sufficiently long enough (0.25 of a quarter note) and uses that as a marker of the "cut-off point". We did also set 2 quarter notes as the minimum length of a phrase and 8 quarter notes as the maximum. If the current phrase being tracked runs more than 8 quarter notes, we cut it off (before it meets a pause) and discard the remainder of that phrase and restart the new phrase tracker after the first pause it meets from the cutoff point.
